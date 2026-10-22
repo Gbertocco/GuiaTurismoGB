@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:guia_turismo/controllers/lugares_controller.dart';
 import 'package:guia_turismo/controllers/theme_controller.dart';
+import 'package:guia_turismo/screens/cadastro_lugar_sreeen.dart';
 import 'package:guia_turismo/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +13,7 @@ class Inicializar extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => ThemeController()),
+        ChangeNotifierProvider(create: (context) => LugaresController()),
       ],
       child: Consumer<ThemeController>(
         builder: (context, controllerTema, child) =>
@@ -22,6 +25,7 @@ class Inicializar extends StatelessWidget {
       themeMode: controllerTema.temaAtual,
       routes: {
         'home':(context) => HomeScreen(),
+        'cadastro_lugar': (context) => const CadastroLugarScreen(),
         // 'login' (context) => LoginScreen()
       }
     )
