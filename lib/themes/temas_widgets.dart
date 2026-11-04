@@ -1,7 +1,6 @@
-
 import 'package:flutter/material.dart';
 
-AppBarTheme defineAppBar(cor){
+AppBarTheme defineAppBar(ColorScheme cor) {
   return AppBarTheme(
     centerTitle: true,
     backgroundColor: cor.primary,
@@ -10,16 +9,18 @@ AppBarTheme defineAppBar(cor){
   );
 }
 
-BottomNavigationBarThemeData defineNavegacaoBase (cor){
+BottomNavigationBarThemeData defineNavegacaoBase(ColorScheme cor) {
   return BottomNavigationBarThemeData(
     backgroundColor: cor.primary,
     elevation: 4,
-
   );
 }
 
-ElevatedButtonThemeData defineBotaoElevated(cor){
+ElevatedButtonThemeData defineBotaoElevated(ColorScheme cor) {
   return ElevatedButtonThemeData(
-    style: ElevatedButton.styleFrom()
+    style: ElevatedButton.styleFrom(
+      backgroundColor: cor.primary,
+      foregroundColor: cor.onPrimary,
+    ),
   );
 }

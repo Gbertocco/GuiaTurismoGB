@@ -9,17 +9,27 @@ class LugaresServices {
   LugaresServices({http.Client? client}) : _client = client ?? http.Client();
 
   Future<List<LugaresModel>> buscarLugares() async {
-    final resposta = await _client
-        .get(Uri.parse('$url?pagina=1&limite=10'))
-        .timeout(const Duration(seconds: 30));
+    final lugares = <LugaresModel>[];
+    int pagina = 1;
+    const limite = 10;
 
-    if (resposta.statusCode != 200) {
-      throw Exception('Não foi possível carregar os lugares.');
+    // Busca todas as páginas para colocar todos os lugares no mapa.
+    while (true) {
+      final resposta = await _client
+          .get(Uri.parse('$url?pagina=$pagina&limite=$limite'))
+          .timeout(const Duration(seconds: 30));
+
+      if (resposta.statusCode != 200) {
+        throw Exception('Não foi possível carregar os lugares.');
+      }
+
+      final dados = jsonDecode(utf8.decode(resposta.bodyBytes));
+      final List lista = dados['data'];
+      lugares.addAll(lista.map((item) => LugaresModel.fromJson(item)));
+      if (lista.length < limite) break;
+      pagina++;
     }
-
-    final dados = jsonDecode(utf8.decode(resposta.bodyBytes));
-    final List lista = dados['data'];
-    return lista.map((item) => LugaresModel.fromJson(item)).toList();
+    return lugares;
   }
 
   Future<void> cadastrarLugar(LugaresModel lugar, String token) async {

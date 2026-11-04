@@ -38,7 +38,7 @@ class LugaresController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      const configurado = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTMsImlhdCI6MTc5MjY3NTcxMCwiZXhwIjoxNzkyNzYyMTEwfQ.QyINasK9e2agxi8zKs_MG0krwSe3qigAil3eu1wbnNg';
+      const configurado = String.fromEnvironment('API_TOKEN');
       String token = configurado;
 
       if (token.isEmpty) {

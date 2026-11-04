@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:guia_turismo/controllers/lugares_controller.dart';
 import 'package:guia_turismo/models/lugares_model.dart';
+import 'package:guia_turismo/services/localizacao_service.dart';
+import 'package:guia_turismo/widgets/mapa_lugares.dart';
 import 'package:provider/provider.dart';
 
 class CadastroLugarScreen extends StatefulWidget {
@@ -16,6 +18,11 @@ class _CadastroLugarScreenState extends State<CadastroLugarScreen> {
   final descricao = TextEditingController();
   final latitude = TextEditingController();
   final longitude = TextEditingController();
+  final endereco = TextEditingController();
+  final localizacaoService = LocalizacaoService();
+  bool buscando = false;
+  String erroBusca = '';
+  LugaresModel? localSelecionado;
 
   @override
   void dispose() {
@@ -23,6 +30,8 @@ class _CadastroLugarScreenState extends State<CadastroLugarScreen> {
     descricao.dispose();
     latitude.dispose();
     longitude.dispose();
+    endereco.dispose();
+    localizacaoService.dispose();
     super.dispose();
   }
 
@@ -41,7 +50,66 @@ class _CadastroLugarScreenState extends State<CadastroLugarScreen> {
     return null;
   }
 
+  Future<void> buscarEndereco() async {
+    if (buscando) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      buscando = true;
+      erroBusca = '';
+    });
+
+    try {
+      final locais = await localizacaoService.buscarEndereco(endereco.text);
+      if (!mounted) return;
+      if (locais.isEmpty) {
+        setState(
+          () => erroBusca =
+              'Endereço não encontrado. Tente incluir a cidade ou outro CEP.',
+        );
+        return;
+      }
+
+      final local = locais.length == 1
+          ? locais.first
+          : await showModalBottomSheet<LugaresModel>(
+              context: context,
+              showDragHandle: true,
+              builder: (context) => SafeArea(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text(
+                      'Selecione o endereço',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    ...locais.map(
+                      (local) => ListTile(
+                        leading: const Icon(Icons.place),
+                        title: Text(local.nome),
+                        onTap: () => Navigator.pop(context, local),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+      if (!mounted || local == null) return;
+      setState(() {
+        localSelecionado = local;
+        latitude.text = local.latitude.toString();
+        longitude.text = local.longitude.toString();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => erroBusca = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => buscando = false);
+    }
+  }
+
   Future<void> salvar() async {
+    if (buscando) return;
     if (!form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
@@ -103,8 +171,52 @@ class _CadastroLugarScreenState extends State<CadastroLugarScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
+                  controller: endereco,
+                  enabled: !controller.salvando && !buscando,
+                  decoration: const InputDecoration(
+                    labelText: 'Endereço ou CEP',
+                    hintText: 'Rua, número e cidade ou 01001-000',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: controller.salvando || buscando
+                      ? null
+                      : buscarEndereco,
+                  icon: const Icon(Icons.map),
+                  label: Text(buscando ? 'Buscando...' : 'Buscar no mapa'),
+                ),
+                if (erroBusca.isNotEmpty)
+                  Text(
+                    erroBusca,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                if (localSelecionado != null) ...[
+                  const SizedBox(height: 12),
+                  Text(localSelecionado!.nome),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 220,
+                    child: MapaLugares(
+                      key: ValueKey(
+                        '${localSelecionado!.latitude},${localSelecionado!.longitude}',
+                      ),
+                      lugares: [localSelecionado!],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Confira o local. Você também pode ajustar as coordenadas abaixo.',
+                  ),
+                ],
+                const SizedBox(height: 16),
+                TextFormField(
                   controller: latitude,
-                  enabled: !controller.salvando,
+                  enabled: !controller.salvando && !buscando,
+                  onChanged: (_) => setState(() => localSelecionado = null),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                     signed: true,
@@ -115,7 +227,8 @@ class _CadastroLugarScreenState extends State<CadastroLugarScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: longitude,
-                  enabled: !controller.salvando,
+                  enabled: !controller.salvando && !buscando,
+                  onChanged: (_) => setState(() => localSelecionado = null),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                     signed: true,
@@ -132,7 +245,7 @@ class _CadastroLugarScreenState extends State<CadastroLugarScreen> {
                     ),
                   ),
                 ElevatedButton(
-                  onPressed: controller.salvando ? null : salvar,
+                  onPressed: controller.salvando || buscando ? null : salvar,
                   child: Text(
                     controller.salvando ? 'Salvando...' : 'Salvar lugar',
                   ),
